@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  background-color: #fafaf7;
+  background-image: radial-gradient(
+      ellipse 90% 60% at 0% 0%,
+      rgba(168, 198, 130, 0.08) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 100% 0%,
+      rgba(245, 166, 35, 0.06) 0%,
+      transparent 60%
+    );
+  background-attachment: fixed;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-500 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-canvas-ink text-white hover:bg-canvas-ink/90 active:scale-[0.98] shadow-card;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-canvas-ink border border-black/10 hover:bg-canvas-subtle active:scale-[0.98];
+  }
+  .btn-ghost {
+    @apply btn text-canvas-ink hover:bg-black/5;
+  }
+  .btn-danger {
+    @apply btn bg-accent-rose text-white hover:bg-accent-rose/90 active:scale-[0.98];
+  }
+  .input {
+    @apply w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent;
+  }
+  .label {
+    @apply text-xs font-semibold uppercase tracking-wider text-black/55;
+  }
+  .card {
+    @apply rounded-2xl bg-white shadow-card border border-black/[0.04];
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full bg-canvas-subtle px-2.5 py-0.5 text-xs font-medium text-canvas-ink/80;
+  }
+  .scroll-area {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+  }
+  .scroll-area::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-area::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 999px;
+  }
+  .scroll-area::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.22);
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-page {
+    padding: 0 !important;
+  }
+}
