@@ -18,6 +18,8 @@ import {
   IconChevronRight,
   IconClock,
   IconClose,
+  IconMinus,
+  IconPlus,
   IconSearch,
   IconToday,
 } from '@/components/Icons';
@@ -263,6 +265,7 @@ export function PlannerPage() {
                 target={targetFor(day)}
                 mealLookup={mealById}
                 onRemove={(idx) => removePlannedAt(idx)}
+                onAddCopy={(meal) => addMealToDay(meal, day)}
                 dragging={!!dragging}
               />
             ))}
@@ -547,6 +550,7 @@ function DayColumn({
   target,
   mealLookup,
   onRemove,
+  onAddCopy,
   dragging,
 }: {
   day: number;
@@ -557,6 +561,7 @@ function DayColumn({
   target: { cal: number; p: number; c: number; f: number };
   mealLookup: (id: number) => Meal | null;
   onRemove: (idx: number) => void;
+  onAddCopy: (meal: Meal) => void;
   dragging: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day-${day}` });
@@ -675,15 +680,16 @@ function DayColumn({
             )}
           </div>
         )}
-        {plannedItems.map((pl) => {
-          const meal = mealLookup(pl.meal_id);
+        {groupConsecutive(plannedItems).map((group) => {
+          const meal = mealLookup(group.meal_id);
           if (!meal) return null;
           return (
             <PlannedCard
-              key={`${pl._idx}-${pl.meal_id}`}
-              index={pl._idx}
+              key={`${group.indices[0]}-${group.meal_id}-${group.indices.length}`}
+              indices={group.indices}
               meal={meal}
-              onRemove={() => onRemove(pl._idx)}
+              onRemoveLast={() => onRemove(group.indices[group.indices.length - 1])}
+              onAddCopy={() => onAddCopy(meal)}
             />
           );
         })}
@@ -726,20 +732,41 @@ function MacroChip({
   );
 }
 
+function groupConsecutive(
+  items: (PlannedMeal & { _idx: number })[]
+): { meal_id: number; indices: number[] }[] {
+  const groups: { meal_id: number; indices: number[] }[] = [];
+  for (const it of items) {
+    const last = groups[groups.length - 1];
+    if (last && last.meal_id === it.meal_id) {
+      last.indices.push(it._idx);
+    } else {
+      groups.push({ meal_id: it.meal_id, indices: [it._idx] });
+    }
+  }
+  return groups;
+}
+
 function PlannedCard({
-  index,
+  indices,
   meal,
-  onRemove,
+  onRemoveLast,
+  onAddCopy,
 }: {
-  index: number;
+  indices: number[];
   meal: Meal;
-  onRemove: () => void;
+  onRemoveLast: () => void;
+  onAddCopy: () => void;
 }) {
-  const id = `day-card-${index}`;
+  // Drag operates on the first index in the group (one serving at a time).
+  const firstIndex = indices[0];
+  const count = indices.length;
+  const id = `day-card-${firstIndex}`;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id,
-    data: { type: 'day', meal, index },
+    data: { type: 'day', meal, index: firstIndex },
   });
+  const totalCal = meal.per_serving_calories * count;
   return (
     <div
       ref={setNodeRef}
@@ -750,17 +777,14 @@ function PlannedCard({
         isDragging && 'opacity-30'
       )}
     >
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        onPointerDown={(e) => e.stopPropagation()}
-        className="absolute top-1 right-1 rounded-md p-0.5 text-black/35 hover:text-accent-rose hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-        aria-label="Remove from day"
-      >
-        <IconClose size={11} />
-      </button>
+      {count > 1 && (
+        <span
+          className="absolute -top-1 -right-1 z-10 inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded-full bg-canvas-ink text-white text-[10px] font-bold tabular-nums shadow-card pointer-events-none"
+          title={`${count} servings planned`}
+        >
+          ×{count}
+        </span>
+      )}
       <div className="flex items-start gap-2">
         <MealThumb meal={meal} size="sm" className="!h-8 !w-8 !rounded-lg" />
         <div className="flex-1 min-w-0">
@@ -771,24 +795,54 @@ function PlannedCard({
             {meal.name}
           </p>
           <div className="mt-0.5 flex items-baseline gap-1 text-[10px] tabular-nums text-black/55">
-            <span className="font-bold text-canvas-ink">{fmt(meal.per_serving_calories, 0)}</span>
+            <span className="font-bold text-canvas-ink">{fmt(totalCal, 0)}</span>
             <span className="text-[9px] uppercase tracking-wider text-black/40 font-semibold">
               kcal
             </span>
           </div>
           <div className="mt-0.5 flex items-center gap-1 text-[9px] font-bold tabular-nums">
-            <span className="text-accent-coral">P{fmt(meal.per_serving_protein_g, 0)}</span>
-            <span className="text-accent-amber">C{fmt(meal.per_serving_carbs_g, 0)}</span>
-            <span className="text-accent-plum">F{fmt(meal.per_serving_fat_g, 0)}</span>
+            <span className="text-accent-coral">P{fmt(meal.per_serving_protein_g * count, 0)}</span>
+            <span className="text-accent-amber">C{fmt(meal.per_serving_carbs_g * count, 0)}</span>
+            <span className="text-accent-plum">F{fmt(meal.per_serving_fat_g * count, 0)}</span>
           </div>
         </div>
       </div>
-      {meal.prep_time_minutes != null && (
-        <div className="mt-1 flex items-center gap-0.5 text-[9px] text-black/40 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-          <IconClock size={9} />
-          {meal.prep_time_minutes}m
+      <div className="mt-1.5 flex items-center justify-between gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {meal.prep_time_minutes != null ? (
+          <div className="flex items-center gap-0.5 text-[9px] text-black/40 font-medium">
+            <IconClock size={9} />
+            {meal.prep_time_minutes}m
+          </div>
+        ) : (
+          <span />
+        )}
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemoveLast();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="rounded-md h-5 w-5 grid place-items-center text-black/45 hover:text-accent-rose hover:bg-rose-50"
+            aria-label={count > 1 ? 'Remove one serving' : 'Remove from day'}
+            title={count > 1 ? 'Remove one' : 'Remove'}
+          >
+            <IconMinus size={10} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddCopy();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="rounded-md h-5 w-5 grid place-items-center text-black/45 hover:text-brand-700 hover:bg-brand-50"
+            aria-label="Add another serving"
+            title="Add another"
+          >
+            <IconPlus size={10} />
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

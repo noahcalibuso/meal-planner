@@ -50,6 +50,12 @@ export const IconPlus = (p: IconProps) => (
   </svg>
 );
 
+export const IconMinus = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M5 12h14" />
+  </svg>
+);
+
 export const IconSearch = (p: IconProps) => (
   <svg {...base(p)}>
     <circle cx="11" cy="11" r="7" />
