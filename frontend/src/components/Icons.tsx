@@ -150,3 +150,54 @@ export const IconFire = (p: IconProps) => (
     <path d="M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-3 2-6 1 1 2 2 3 1z" />
   </svg>
 );
+
+export const IconLeaf = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M11 20A7 7 0 0 1 4 13c0-6 7-9 14-9 0 7-2 14-7 16Z" />
+    <path d="M4 21c2-4 4-7 7-9" />
+  </svg>
+);
+
+export const IconWheat = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 22V8" />
+    <path d="M12 8c-2-2-2-4 0-6 2 2 2 4 0 6Z" />
+    <path d="M12 12c-3-1-4-3-3-5 3 0 4 2 3 5Z" />
+    <path d="M12 12c3-1 4-3 3-5-3 0-4 2-3 5Z" />
+    <path d="M12 17c-3-1-4-3-3-5 3 0 4 2 3 5Z" />
+    <path d="M12 17c3-1 4-3 3-5-3 0-4 2-3 5Z" />
+  </svg>
+);
+
+export const IconMilk = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M8 2h8v4l2 4v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V10l2-4z" />
+    <path d="M6 10h12" />
+  </svg>
+);
+
+export const IconShrimp = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M5 13a7 7 0 1 1 14 0v3a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" />
+    <path d="M9 9V6M15 9V6" />
+  </svg>
+);
+
+export const IconBox = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M21 8 12 3 3 8v8l9 5 9-5z" />
+    <path d="M3 8l9 5 9-5M12 13v8" />
+  </svg>
+);
+
+export const IconSnowflake = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 2v20M2 12h20M5 5l14 14M19 5 5 19" />
+  </svg>
+);
+
+export const IconDrop = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 3s7 7 7 12a7 7 0 1 1-14 0c0-5 7-12 7-12Z" />
+  </svg>
+);

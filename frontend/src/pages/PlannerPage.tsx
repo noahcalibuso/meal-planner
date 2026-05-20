@@ -18,12 +18,10 @@ import {
   IconChevronRight,
   IconClock,
   IconClose,
-  IconPlus,
   IconSearch,
   IconToday,
 } from '@/components/Icons';
 import { MealThumb } from '@/components/MealThumb';
-import { MacroBar } from '@/components/MacroBar';
 import {
   DAY_LABELS,
   DAY_LABELS_LONG,
@@ -95,9 +93,7 @@ export function PlannerPage() {
   }
 
   function targetFor(day: number) {
-    if (!settings) {
-      return { cal: 2000, p: 150, c: 200, f: 70 };
-    }
+    if (!settings) return { cal: 2000, p: 150, c: 200, f: 70 };
     const over = settings.per_day.find((d) => d.day_of_week === day);
     return {
       cal: over?.calories ?? settings.defaults.default_calories,
@@ -107,12 +103,34 @@ export function PlannerPage() {
     };
   }
 
-  function jumpWeek(delta: number) {
-    const cur = fromISODate(weekStartISO);
-    const next = addDays(cur, delta * 7);
-    setWeekStartISO(toISODate(next));
-  }
+  // Week totals for header strip
+  const weekTotals = useMemo(() => {
+    let cal = 0,
+      p = 0,
+      c = 0,
+      f = 0,
+      tcal = 0,
+      tp = 0,
+      tc = 0,
+      tf = 0;
+    for (let d = 0; d < 7; d++) {
+      const t = dayTotals(d);
+      const tgt = targetFor(d);
+      cal += t.cal;
+      p += t.p;
+      c += t.c;
+      f += t.f;
+      tcal += tgt.cal;
+      tp += tgt.p;
+      tc += tgt.c;
+      tf += tgt.f;
+    }
+    return { cal, p, c, f, tcal, tp, tc, tf };
+  }, [planned, settings, meals]);
 
+  function jumpWeek(delta: number) {
+    setWeekStartISO(toISODate(addDays(fromISODate(weekStartISO), delta * 7)));
+  }
   function jumpToToday() {
     setWeekStartISO(toISODate(startOfWeek(new Date())));
   }
@@ -123,28 +141,20 @@ export function PlannerPage() {
       .filter((p) => p.day_of_week === day);
   }
 
-  function nextPlannedId() {
-    return `pm-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  }
-
-  function addMealToDay(meal: Meal, day: number, atPosition?: number) {
+  function addMealToDay(meal: Meal, day: number) {
     const dayItems = planned.filter((p) => p.day_of_week === day);
-    const pos = atPosition ?? dayItems.length;
     const newItem: PlannedMeal = {
       meal_id: meal.id,
       day_of_week: day,
-      position_in_day: pos,
+      position_in_day: dayItems.length,
     };
-    const rest = planned.filter((p) => !(p.day_of_week === day));
-    const updatedDay = [...dayItems];
-    updatedDay.splice(pos, 0, newItem);
-    const next = [...rest, ...updatedDay.map((p, i) => ({ ...p, position_in_day: i }))];
-    setPlannedMeals(next);
+    const rest = planned.filter((p) => p.day_of_week !== day);
+    const updatedDay = [...dayItems, newItem].map((p, i) => ({ ...p, position_in_day: i }));
+    setPlannedMeals([...rest, ...updatedDay]);
   }
 
   function removePlannedAt(idx: number) {
-    const next = planned.filter((_, i) => i !== idx);
-    setPlannedMeals(next);
+    setPlannedMeals(planned.filter((_, i) => i !== idx));
   }
 
   function movePlannedToDay(srcIdx: number, day: number) {
@@ -164,11 +174,7 @@ export function PlannerPage() {
       | { type: 'day'; meal: Meal; index: number }
       | undefined;
     if (!data) return;
-    setDragging({
-      meal: data.meal,
-      source: data.type,
-      id: String(e.active.id),
-    });
+    setDragging({ meal: data.meal, source: data.type, id: String(e.active.id) });
   }
 
   function handleDragEnd(e: DragEndEvent) {
@@ -181,19 +187,29 @@ export function PlannerPage() {
       | { type: 'day'; meal: Meal; index: number };
 
     if (overId === SIDEBAR_ID) {
-      if (data.type === 'day') {
-        removePlannedAt(data.index);
-      }
+      if (data.type === 'day') removePlannedAt(data.index);
       return;
     }
     if (overId.startsWith('day-')) {
       const day = Number(overId.slice(4));
-      if (data.type === 'sidebar') {
-        addMealToDay(data.meal, day);
-      } else {
-        movePlannedToDay(data.index, day);
-      }
+      if (data.type === 'sidebar') addMealToDay(data.meal, day);
+      else movePlannedToDay(data.index, day);
     }
+  }
+
+  function isTodayDate(startISO: string, day: number) {
+    const start = fromISODate(startISO);
+    const d = addDays(start, day);
+    const today = new Date();
+    return (
+      d.getFullYear() === today.getFullYear() &&
+      d.getMonth() === today.getMonth() &&
+      d.getDate() === today.getDate()
+    );
+  }
+
+  function dateFor(day: number) {
+    return addDays(fromISODate(weekStartISO), day);
   }
 
   return (
@@ -201,7 +217,7 @@ export function PlannerPage() {
       <div className="space-y-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-wider font-bold text-black/45">
+            <p className="text-xs uppercase tracking-[0.18em] font-bold text-black/40">
               Week plan
             </p>
             <h1 className="text-3xl font-bold tracking-tight">
@@ -221,7 +237,9 @@ export function PlannerPage() {
           </div>
         </header>
 
-        <div className="grid grid-cols-[320px_1fr] gap-4 items-start">
+        <WeekSummary t={weekTotals} />
+
+        <div className="grid grid-cols-[280px_1fr] gap-3 items-start">
           <Sidebar
             meals={filteredMeals}
             allMeals={meals}
@@ -233,24 +251,21 @@ export function PlannerPage() {
             setActiveTag={setActiveTag}
             isDropTarget={dragging?.source === 'day'}
           />
-          <div className="grid grid-cols-7 gap-3">
-            {Array.from({ length: 7 }).map((_, day) => {
-              const totals = dayTotals(day);
-              const target = targetFor(day);
-              return (
-                <DayColumn
-                  key={day}
-                  day={day}
-                  isToday={isTodayDate(weekStartISO, day)}
-                  plannedItems={plannedForDay(day)}
-                  totals={totals}
-                  target={target}
-                  mealLookup={mealById}
-                  onRemove={(idx) => removePlannedAt(idx)}
-                  dragging={!!dragging}
-                />
-              );
-            })}
+          <div className="grid grid-cols-7 gap-2">
+            {Array.from({ length: 7 }).map((_, day) => (
+              <DayColumn
+                key={day}
+                day={day}
+                date={dateFor(day)}
+                isToday={isTodayDate(weekStartISO, day)}
+                plannedItems={plannedForDay(day)}
+                totals={dayTotals(day)}
+                target={targetFor(day)}
+                mealLookup={mealById}
+                onRemove={(idx) => removePlannedAt(idx)}
+                dragging={!!dragging}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -260,23 +275,52 @@ export function PlannerPage() {
       </DragOverlay>
 
       {loadingWeekPlan && (
-        <div className="fixed bottom-6 left-6 text-xs text-black/40 no-print">
-          Syncing…
-        </div>
+        <div className="fixed bottom-6 left-6 text-xs text-black/40 no-print">Syncing…</div>
       )}
     </DndContext>
   );
+}
 
-  function isTodayDate(startISO: string, day: number) {
-    const start = fromISODate(startISO);
-    const d = addDays(start, day);
-    const today = new Date();
-    return (
-      d.getFullYear() === today.getFullYear() &&
-      d.getMonth() === today.getMonth() &&
-      d.getDate() === today.getDate()
-    );
-  }
+function WeekSummary({ t }: { t: { cal: number; p: number; c: number; f: number; tcal: number; tp: number; tc: number; tf: number } }) {
+  const dayCount = 7;
+  const items: { label: string; cur: number; tgt: number; color: string; dot: string }[] = [
+    { label: 'Calories', cur: t.cal, tgt: t.tcal, color: 'bg-canvas-ink', dot: 'bg-canvas-ink' },
+    { label: 'Protein', cur: t.p, tgt: t.tp, color: 'bg-accent-coral', dot: 'bg-accent-coral' },
+    { label: 'Carbs', cur: t.c, tgt: t.tc, color: 'bg-accent-amber', dot: 'bg-accent-amber' },
+    { label: 'Fat', cur: t.f, tgt: t.tf, color: 'bg-accent-plum', dot: 'bg-accent-plum' },
+  ];
+  return (
+    <div className="card p-4 grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-black/45">Week so far</p>
+        <p className="text-2xl font-bold tracking-tight mt-1 tabular-nums">
+          {fmt(t.cal, 0)}
+          <span className="text-sm font-medium text-black/40 ml-1">kcal planned</span>
+        </p>
+        <p className="text-[11px] text-black/50 mt-0.5">
+          Avg {fmt(t.cal / dayCount, 0)} kcal / day · target {fmt(t.tcal / dayCount, 0)}
+        </p>
+      </div>
+      {items.map((m) => {
+        const pct = m.tgt > 0 ? Math.min(100, (m.cur / m.tgt) * 100) : 0;
+        return (
+          <div key={m.label}>
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] font-bold text-black/55">
+              <span className={cn('h-1.5 w-1.5 rounded-full', m.dot)} />
+              {m.label}
+            </div>
+            <p className="text-lg font-bold tabular-nums mt-1">
+              {fmt(m.cur, 0)}
+              <span className="text-xs text-black/40 font-medium">/{fmt(m.tgt, 0)}{m.label === 'Calories' ? '' : 'g'}</span>
+            </p>
+            <div className="mt-1.5 h-1 w-full rounded-full bg-canvas-subtle overflow-hidden">
+              <div className={cn('h-full rounded-full', m.color)} style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function Sidebar({
@@ -307,14 +351,16 @@ function Sidebar({
       ref={setNodeRef}
       className={cn(
         'card sticky top-[80px] max-h-[calc(100vh-104px)] flex flex-col overflow-hidden transition-shadow',
-        isDropTarget && 'ring-2 ring-accent-rose/50 ring-offset-2 ring-offset-canvas',
+        isDropTarget && 'ring-2 ring-accent-rose/40 ring-offset-2 ring-offset-canvas',
         isOver && 'ring-2 ring-accent-rose ring-offset-2 ring-offset-canvas'
       )}
     >
       <div className="px-4 pt-4 pb-3 border-b border-black/[0.06] space-y-3">
         <div className="flex items-baseline justify-between">
-          <h2 className="font-bold tracking-tight text-sm">Meal Library</h2>
-          <span className="text-[11px] text-black/45 tabular-nums">{meals.length} of {allMeals.length}</span>
+          <h2 className="font-bold tracking-tight text-sm">Library</h2>
+          <span className="text-[11px] text-black/45 tabular-nums">
+            {meals.length} of {allMeals.length}
+          </span>
         </div>
         <div className="relative">
           <IconSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40" />
@@ -326,7 +372,7 @@ function Sidebar({
           />
         </div>
         {tagOptions.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1 -mx-0.5">
             <button
               onClick={() => setActiveTag(null)}
               className={cn(
@@ -336,7 +382,7 @@ function Sidebar({
             >
               All
             </button>
-            {tagOptions.map((t) => (
+            {tagOptions.slice(0, 8).map((t) => (
               <button
                 key={t}
                 onClick={() => setActiveTag(activeTag === t ? null : t)}
@@ -351,21 +397,23 @@ function Sidebar({
           </div>
         )}
         {isDropTarget && (
-          <p className="text-[11px] text-accent-rose font-medium flex items-center gap-1">
+          <p className="text-[11px] text-accent-rose font-semibold flex items-center gap-1">
             <IconClose size={11} /> Drop here to remove from plan
           </p>
         )}
       </div>
-      <div className="flex-1 overflow-y-auto scroll-area p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto scroll-area p-2 space-y-1.5">
         {allMeals.length === 0 && (
-          <div className="text-center text-sm text-black/45 px-3 py-6">
+          <div className="text-center text-sm text-black/45 px-3 py-10">
             <IconBowl />
             <p className="mt-2">Your library is empty.</p>
-            <p className="text-xs text-black/35">Create meals from the Library tab to plan them here.</p>
+            <p className="text-xs text-black/35">
+              Create meals from the Library tab to plan them here.
+            </p>
           </div>
         )}
         {allMeals.length > 0 && meals.length === 0 && (
-          <p className="text-center text-sm text-black/45 px-3 py-6">No meals match.</p>
+          <p className="text-center text-sm text-black/45 px-3 py-10">No meals match.</p>
         )}
         {meals.map((m) => {
           const placed = placedCounts.get(m.id) ?? 0;
@@ -397,27 +445,41 @@ function SidebarCard({
       {...listeners}
       {...attributes}
       className={cn(
-        'group relative card border border-black/[0.06] p-2.5 hover:shadow-cardHover hover:-translate-y-0.5 transition-all cursor-grab active:cursor-grabbing select-none',
+        'group relative rounded-xl border border-black/[0.05] bg-white p-2 hover:shadow-card hover:-translate-y-0.5 hover:border-black/[0.1] transition-all cursor-grab active:cursor-grabbing select-none',
         isDragging && 'opacity-40'
       )}
     >
       <div className="flex items-start gap-2.5">
-        <MealThumb meal={meal} size="sm" />
+        <MealThumb meal={meal} size="sm" className="!h-11 !w-11" />
         <div className="flex-1 min-w-0">
           <p
-            className="text-sm font-semibold leading-tight truncate"
+            className="text-[13px] font-bold leading-tight line-clamp-2"
             title={meal.name}
           >
             {meal.name}
           </p>
-          <p className="text-[11px] text-black/50 mt-0.5 tabular-nums">
-            {fmt(meal.per_serving_calories, 0)} kcal · P{fmt(meal.per_serving_protein_g, 0)} / C
-            {fmt(meal.per_serving_carbs_g, 0)} / F{fmt(meal.per_serving_fat_g, 0)}
-          </p>
+          <div className="mt-1 flex items-center gap-1.5 text-[10px] text-black/55 tabular-nums">
+            <span className="font-semibold text-canvas-ink">
+              {fmt(meal.per_serving_calories, 0)}
+            </span>
+            <span className="text-black/30">·</span>
+            <MacroMicro letter="P" value={meal.per_serving_protein_g} color="text-accent-coral" />
+            <MacroMicro letter="C" value={meal.per_serving_carbs_g} color="text-accent-amber" />
+            <MacroMicro letter="F" value={meal.per_serving_fat_g} color="text-accent-plum" />
+          </div>
         </div>
         <BatchBadge placed={placed} servingCount={meal.serving_count} badge={badge} />
       </div>
     </div>
+  );
+}
+
+function MacroMicro({ letter, value, color }: { letter: string; value: number; color: string }) {
+  return (
+    <span className="inline-flex items-baseline gap-0.5">
+      <span className={cn('font-bold', color)}>{letter}</span>
+      <span className="text-black/65 font-semibold">{fmt(value, 0)}</span>
+    </span>
   );
 }
 
@@ -433,14 +495,13 @@ function BatchBadge({
   if (placed === 0) {
     return (
       <span
-        className="chip text-[10px] tabular-nums shrink-0"
+        className="shrink-0 inline-flex items-center justify-center h-6 min-w-[28px] px-1.5 rounded-md bg-canvas-subtle text-[10px] font-bold text-black/55 tabular-nums"
         title={`${servingCount} servings per batch`}
       >
         {servingCount}×
       </span>
     );
   }
-  const filled = servingCount - badge.remaining;
   return (
     <div
       className="shrink-0 flex flex-col items-end gap-0.5"
@@ -449,42 +510,25 @@ function BatchBadge({
       } needed`}
       data-testid="batch-badge"
     >
-      <span className="chip text-[10px] tabular-nums bg-brand-100 text-brand-800 font-bold">
+      <span className="inline-flex items-center justify-center h-6 min-w-[36px] px-1.5 rounded-md bg-brand-100 text-brand-800 text-[10px] font-bold tabular-nums">
         {badge.remaining}/{servingCount}
       </span>
       {badge.batchesStarted > 1 && (
-        <span className="text-[9px] text-brand-700 font-semibold uppercase tracking-wider">
-          ×{badge.batchesStarted} batches
+        <span className="text-[9px] text-brand-700 font-bold uppercase tracking-wider">
+          ×{badge.batchesStarted}
         </span>
       )}
-      <BatchPips total={servingCount} filled={filled} />
-    </div>
-  );
-}
-
-function BatchPips({ total, filled }: { total: number; filled: number }) {
-  return (
-    <div className="flex gap-[2px]">
-      {Array.from({ length: total }).map((_, i) => (
-        <span
-          key={i}
-          className={cn(
-            'h-1 w-1.5 rounded-sm',
-            i < filled ? 'bg-brand-500' : 'bg-black/15'
-          )}
-        />
-      ))}
     </div>
   );
 }
 
 function DragGhost({ meal }: { meal: Meal }) {
   return (
-    <div className="card p-2.5 shadow-cardHover border border-black/10 rotate-[-2deg] w-[260px] pointer-events-none">
-      <div className="flex items-center gap-2.5">
+    <div className="card p-3 shadow-cardHover border border-black/10 rotate-[-2deg] w-[260px] pointer-events-none">
+      <div className="flex items-center gap-3">
         <MealThumb meal={meal} size="sm" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">{meal.name}</p>
+          <p className="text-sm font-bold truncate">{meal.name}</p>
           <p className="text-[11px] text-black/50 tabular-nums">
             {fmt(meal.per_serving_calories, 0)} kcal per serving
           </p>
@@ -496,6 +540,7 @@ function DragGhost({ meal }: { meal: Meal }) {
 
 function DayColumn({
   day,
+  date,
   isToday,
   plannedItems,
   totals,
@@ -505,6 +550,7 @@ function DayColumn({
   dragging,
 }: {
   day: number;
+  date: Date;
   isToday: boolean;
   plannedItems: (PlannedMeal & { _idx: number })[];
   totals: { cal: number; p: number; c: number; f: number };
@@ -514,88 +560,119 @@ function DayColumn({
   dragging: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day-${day}` });
+  const calPct = target.cal > 0 ? (totals.cal / target.cal) * 100 : 0;
   const calOver = totals.cal > target.cal && target.cal > 0;
-  const anyOver =
-    calOver ||
-    totals.p > target.p ||
-    totals.c > target.c ||
-    totals.f > target.f;
+  const dayNum = date.getDate();
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        'card flex flex-col min-h-[440px] transition-all',
+        'rounded-2xl bg-white border flex flex-col min-h-[460px] transition-all',
+        isToday ? 'border-brand-300/80 shadow-card' : 'border-black/[0.06] shadow-card',
         isOver && 'ring-2 ring-brand-400 -translate-y-0.5 shadow-cardHover',
-        dragging && !isOver && 'ring-1 ring-dashed ring-black/15'
+        dragging && !isOver && 'border-dashed border-black/15'
       )}
     >
-      <div className="px-3 pt-3 pb-2 border-b border-black/[0.05]">
-        <div className="flex items-baseline justify-between">
-          <p
-            className={cn(
-              'text-xs uppercase tracking-wider font-bold',
-              isToday ? 'text-brand-700' : 'text-black/60'
-            )}
-          >
-            {DAY_LABELS[day]}
-            {isToday && (
-              <span className="ml-1 text-[9px] text-brand-700 bg-brand-100 px-1 py-0.5 rounded">
-                today
-              </span>
-            )}
-          </p>
-          <span
-            className={cn(
-              'text-[11px] tabular-nums font-bold',
-              anyOver ? 'text-accent-rose' : 'text-canvas-ink/65'
-            )}
-          >
-            {fmt(totals.cal, 0)}
-            <span className="text-black/40 font-medium">/{fmt(target.cal, 0)}</span>
-          </span>
+      <div
+        className={cn(
+          'px-3 pt-3 pb-2.5 rounded-t-2xl',
+          isToday && 'bg-brand-50/60'
+        )}
+      >
+        <div className="flex items-baseline justify-between gap-1">
+          <div className="flex items-baseline gap-1.5">
+            <span
+              className={cn(
+                'text-[10px] font-bold uppercase tracking-[0.16em]',
+                isToday ? 'text-brand-700' : 'text-black/55'
+              )}
+            >
+              {DAY_LABELS[day]}
+            </span>
+            <span
+              className={cn(
+                'text-base font-bold tabular-nums leading-none',
+                isToday ? 'text-brand-700' : 'text-canvas-ink'
+              )}
+            >
+              {dayNum}
+            </span>
+          </div>
+          {isToday && (
+            <span className="text-[9px] font-bold uppercase tracking-wider text-brand-700">
+              Today
+            </span>
+          )}
         </div>
-        <div className="mt-2 space-y-1">
-          <MacroBar
-            label="Cal"
-            current={totals.cal}
-            target={target.cal}
-            color="bg-canvas-ink"
-            unit=""
-            compact
-          />
-          <MacroBar
-            label="Protein"
-            current={totals.p}
-            target={target.p}
+
+        <div className="mt-2.5">
+          <div className="flex items-baseline justify-between">
+            <span
+              className={cn(
+                'text-base font-bold tabular-nums leading-none',
+                calOver ? 'text-accent-rose' : 'text-canvas-ink'
+              )}
+            >
+              {fmt(totals.cal, 0)}
+            </span>
+            <span className="text-[10px] text-black/40 tabular-nums font-medium">
+              /{fmt(target.cal, 0)}
+            </span>
+          </div>
+          <div className="relative mt-1.5 h-[5px] rounded-full bg-canvas-subtle overflow-hidden">
+            <div
+              className={cn(
+                'absolute inset-y-0 left-0 rounded-full transition-all duration-300',
+                calOver ? 'bg-accent-rose' : 'bg-canvas-ink'
+              )}
+              style={{ width: `${Math.min(100, calPct)}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-2 flex items-center gap-1">
+          <MacroChip
+            letter="P"
+            cur={totals.p}
+            tgt={target.p}
             color="bg-accent-coral"
-            compact
           />
-          <MacroBar
-            label="Carbs"
-            current={totals.c}
-            target={target.c}
+          <MacroChip
+            letter="C"
+            cur={totals.c}
+            tgt={target.c}
             color="bg-accent-amber"
-            compact
           />
-          <MacroBar
-            label="Fat"
-            current={totals.f}
-            target={target.f}
+          <MacroChip
+            letter="F"
+            cur={totals.f}
+            tgt={target.f}
             color="bg-accent-plum"
-            compact
           />
         </div>
       </div>
+
+      <div className="border-t border-black/[0.05]" />
+
       <div className="flex-1 p-2 space-y-1.5 scroll-area overflow-y-auto">
         {plannedItems.length === 0 && (
           <div
             className={cn(
-              'rounded-xl border border-dashed border-black/15 text-[11px] text-black/35 text-center py-6 px-2',
-              dragging && 'border-brand-400 text-brand-700 bg-brand-50'
+              'rounded-xl border border-dashed text-[11px] text-center py-8 px-2 mt-1 transition-colors',
+              dragging
+                ? 'border-brand-400 text-brand-700 bg-brand-50/70'
+                : 'border-black/10 text-black/30'
             )}
           >
-            {dragging ? `Drop in ${DAY_LABELS_LONG[day]}` : 'Drag meals here'}
+            {dragging ? (
+              <>
+                <p className="font-semibold">Drop in</p>
+                <p>{DAY_LABELS_LONG[day]}</p>
+              </>
+            ) : (
+              'Drag meals here'
+            )}
           </div>
         )}
         {plannedItems.map((pl) => {
@@ -610,6 +687,40 @@ function DayColumn({
             />
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function MacroChip({
+  letter,
+  cur,
+  tgt,
+  color,
+}: {
+  letter: string;
+  cur: number;
+  tgt: number;
+  color: string;
+}) {
+  const pct = tgt > 0 ? Math.min(100, (cur / tgt) * 100) : 0;
+  const over = tgt > 0 && cur > tgt;
+  return (
+    <div
+      className="flex-1 group relative"
+      title={`${letter}: ${fmt(cur, 0)} / ${fmt(tgt, 0)}g`}
+    >
+      <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider">
+        <span className="text-black/45">{letter}</span>
+        <span className={cn('tabular-nums', over ? 'text-accent-rose' : 'text-canvas-ink/70')}>
+          {fmt(cur, 0)}
+        </span>
+      </div>
+      <div className="mt-0.5 h-[3px] rounded-full bg-canvas-subtle overflow-hidden">
+        <div
+          className={cn('h-full rounded-full', over ? 'bg-accent-rose' : color)}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   );
@@ -635,36 +746,46 @@ function PlannedCard({
       {...listeners}
       {...attributes}
       className={cn(
-        'group relative rounded-xl bg-canvas-subtle border border-black/[0.04] p-2 hover:bg-white hover:shadow-card transition-all cursor-grab active:cursor-grabbing',
+        'group relative rounded-xl bg-canvas-subtle border border-transparent p-2 hover:bg-white hover:border-black/10 hover:shadow-card transition-all cursor-grab active:cursor-grabbing',
         isDragging && 'opacity-30'
       )}
     >
-      <div className="flex items-center gap-2">
-        <MealThumb meal={meal} size="sm" className="!h-9 !w-9" />
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="absolute top-1 right-1 rounded-md p-0.5 text-black/35 hover:text-accent-rose hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        aria-label="Remove from day"
+      >
+        <IconClose size={11} />
+      </button>
+      <div className="flex items-start gap-2">
+        <MealThumb meal={meal} size="sm" className="!h-8 !w-8 !rounded-lg" />
         <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-semibold leading-tight truncate" title={meal.name}>
+          <p
+            className="text-[11.5px] font-bold leading-[1.2] line-clamp-2"
+            title={meal.name}
+          >
             {meal.name}
           </p>
-          <p className="text-[10px] text-black/50 tabular-nums mt-0.5">
-            {fmt(meal.per_serving_calories, 0)} kcal · P{fmt(meal.per_serving_protein_g, 0)} /
-            C{fmt(meal.per_serving_carbs_g, 0)} / F{fmt(meal.per_serving_fat_g, 0)}
-          </p>
+          <div className="mt-0.5 flex items-baseline gap-1 text-[10px] tabular-nums text-black/55">
+            <span className="font-bold text-canvas-ink">{fmt(meal.per_serving_calories, 0)}</span>
+            <span className="text-[9px] uppercase tracking-wider text-black/40 font-semibold">
+              kcal
+            </span>
+          </div>
+          <div className="mt-0.5 flex items-center gap-1 text-[9px] font-bold tabular-nums">
+            <span className="text-accent-coral">P{fmt(meal.per_serving_protein_g, 0)}</span>
+            <span className="text-accent-amber">C{fmt(meal.per_serving_carbs_g, 0)}</span>
+            <span className="text-accent-plum">F{fmt(meal.per_serving_fat_g, 0)}</span>
+          </div>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="rounded-md p-1 text-black/35 hover:text-accent-rose hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity"
-          aria-label="Remove from day"
-        >
-          <IconClose size={12} />
-        </button>
       </div>
       {meal.prep_time_minutes != null && (
-        <div className="absolute bottom-1 right-2 text-[9px] text-black/35 flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
-          <IconClock size={10} />
+        <div className="mt-1 flex items-center gap-0.5 text-[9px] text-black/40 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+          <IconClock size={9} />
           {meal.prep_time_minutes}m
         </div>
       )}
