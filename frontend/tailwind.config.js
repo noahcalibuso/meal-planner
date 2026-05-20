@@ -5,61 +5,78 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          'Inter',
+          'Geist',
           'ui-sans-serif',
           'system-ui',
           '-apple-system',
           'Segoe UI',
-          'Roboto',
           'sans-serif',
         ],
-        display: [
-          'Inter',
-          'ui-sans-serif',
-          'system-ui',
-          'sans-serif',
+        serif: [
+          'Newsreader',
+          'Georgia',
+          'Times New Roman',
+          'serif',
+        ],
+        mono: [
+          'Geist Mono',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'monospace',
         ],
       },
       colors: {
-        canvas: {
-          DEFAULT: '#fafaf7',
-          card: '#ffffff',
-          subtle: '#f3f2ed',
-          ink: '#13121a',
+        paper: {
+          DEFAULT: '#f5efe2',
+          2: '#ede5d2',
+          3: '#e3d9bf',
         },
-        brand: {
-          50: '#f3f7ee',
-          100: '#e3edd6',
-          200: '#cadcb0',
-          300: '#a8c682',
-          400: '#85ad57',
-          500: '#669440',
-          600: '#4f7831',
-          700: '#3f5e29',
-          800: '#354c25',
-          900: '#2c3f20',
+        card: {
+          DEFAULT: '#fbf7ec',
+          warm: '#faf2dc',
         },
-        accent: {
-          coral: '#ef6f5b',
-          amber: '#f5a623',
-          plum: '#7c3aed',
-          sky: '#0ea5e9',
-          rose: '#e11d48',
+        ink: {
+          DEFAULT: '#1a140d',
+          2: '#3b3022',
+          3: '#6b5d47',
         },
-        macro: {
-          cal: '#13121a',
-          protein: '#ef6f5b',
-          carbs: '#f5a623',
-          fat: '#7c3aed',
+        muted: {
+          DEFAULT: '#948266',
+          2: '#b6a888',
         },
+        rule: {
+          DEFAULT: '#d9cdb1',
+          soft: '#e8dfc7',
+        },
+        terracotta: {
+          DEFAULT: '#c25a3c',
+          2: '#a64a30',
+        },
+        mustard: {
+          DEFAULT: '#c98a1f',
+          2: '#a87013',
+        },
+        sage: {
+          DEFAULT: '#6f7d4a',
+          2: '#586438',
+        },
+        plum: {
+          DEFAULT: '#7c4a64',
+          2: '#5e3349',
+        },
+        rose: '#b23d54',
       },
       boxShadow: {
-        card: '0 1px 2px rgba(0,0,0,0.03), 0 4px 12px rgba(15,15,20,0.04)',
-        cardHover: '0 2px 4px rgba(0,0,0,0.04), 0 12px 24px rgba(15,15,20,0.07)',
-        ring: '0 0 0 1px rgba(15,15,20,0.06)',
+        sm: '0 1px 0 rgba(60, 40, 20, 0.04), 0 1px 2px rgba(60, 40, 20, 0.06)',
+        md: '0 1px 2px rgba(60, 40, 20, 0.06), 0 8px 20px rgba(60, 40, 20, 0.06)',
+        lg: '0 1px 2px rgba(60, 40, 20, 0.06), 0 22px 40px rgba(60, 40, 20, 0.10)',
       },
       borderRadius: {
-        xl2: '1.25rem',
+        sm: '8px',
+        md: '12px',
+        lg: '18px',
+        xl: '24px',
       },
       keyframes: {
         slideUp: {
@@ -70,10 +87,14 @@ export default {
           from: { transform: 'scale(0.96)', opacity: '0' },
           to: { transform: 'scale(1)', opacity: '1' },
         },
+        pulseDot: {
+          '50%': { boxShadow: '0 0 0 7px rgba(194,90,60,0.06)' },
+        },
       },
       animation: {
         slideUp: 'slideUp 220ms ease-out',
         pop: 'pop 180ms ease-out',
+        pulseDot: 'pulseDot 2s ease-in-out infinite',
       },
     },
   },

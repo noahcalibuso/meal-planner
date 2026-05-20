@@ -4,7 +4,7 @@ interface Props {
   label: string;
   current: number;
   target: number;
-  color: string; // tailwind bg class for bar
+  color: string; // CSS color value
   unit?: string;
   compact?: boolean;
 }
@@ -20,41 +20,25 @@ export function MacroBar({
   const safeTarget = target > 0 ? target : 1;
   const pct = Math.min(100, (current / safeTarget) * 100);
   const over = target > 0 && current > target;
-  const overPct = over ? Math.min(40, ((current - target) / safeTarget) * 100) : 0;
   return (
-    <div className={cn('w-full', compact ? '' : 'space-y-1')}>
-      <div className="flex items-baseline justify-between gap-2">
-        <span
-          className={cn(
-            'font-semibold',
-            compact ? 'text-[10px] uppercase tracking-wider text-black/55' : 'text-xs uppercase tracking-wider text-black/55'
-          )}
-        >
+    <div className="macro-mini" style={{ width: '100%' }}>
+      <div className="row">
+        <span className="lbl" style={{ color }}>
           {label}
         </span>
-        <span
-          className={cn(
-            'tabular-nums font-semibold',
-            compact ? 'text-[11px]' : 'text-xs',
-            over ? 'text-accent-rose' : 'text-canvas-ink/80'
-          )}
-        >
+        <span className={cn('v', over && 'over')}>
           {fmt(current, 0)}
-          <span className="text-black/40 font-medium">/{fmt(target, 0)}{unit}</span>
+          <span style={{ color: 'var(--muted)' }}>/{fmt(target, 0)}{unit}</span>
         </span>
       </div>
-      <div className={cn('relative w-full rounded-full bg-canvas-subtle overflow-hidden', compact ? 'h-1.5' : 'h-2')}>
+      <div className="bar" style={{ height: compact ? 3 : 4 }}>
         <div
-          className={cn('absolute inset-y-0 left-0 rounded-full transition-all duration-300', color)}
-          style={{ width: `${pct}%` }}
+          style={{
+            width: `${pct}%`,
+            background: over ? 'var(--terracotta)' : color,
+          }}
+          data-testid={over ? 'over-indicator' : undefined}
         />
-        {over && (
-          <div
-            className="absolute inset-y-0 right-0 rounded-full bg-accent-rose/80 transition-all duration-300"
-            style={{ width: `${overPct}%` }}
-            data-testid="over-indicator"
-          />
-        )}
       </div>
     </div>
   );

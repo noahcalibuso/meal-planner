@@ -8,7 +8,11 @@ interface Props {
   open: boolean;
   meal: Meal | null;
   onClose: () => void;
-  onSubmit: (data: MealInput, image?: File | null, removeImage?: boolean) => Promise<void>;
+  onSubmit: (
+    data: MealInput,
+    image?: File | null,
+    removeImage?: boolean
+  ) => Promise<void>;
 }
 
 const CATEGORIES = [
@@ -55,7 +59,9 @@ export function MealEditor({ open, meal, onClose, onSubmit }: Props) {
       setTags(meal.tags);
       setNotes(meal.notes ?? '');
       setIngredients(meal.ingredients.map((i) => ({ ...i })));
-      setImagePreview(meal.photo_path ? fileUrl(meal.photo_path) || null : null);
+      setImagePreview(
+        meal.photo_path ? fileUrl(meal.photo_path) || null : null
+      );
     } else {
       setName('');
       setServingCount(4);
@@ -97,7 +103,6 @@ export function MealEditor({ open, meal, onClose, onSubmit }: Props) {
     if (tags.includes(v)) return;
     setTags([...tags, v]);
   }
-
   function removeTag(t: string) {
     setTags(tags.filter((x) => x !== t));
   }
@@ -107,11 +112,9 @@ export function MealEditor({ open, meal, onClose, onSubmit }: Props) {
       prev.map((i, n) => (n === idx ? { ...i, ...patch } : i))
     );
   }
-
   function removeIng(idx: number) {
     setIngredients((prev) => prev.filter((_, n) => n !== idx));
   }
-
   function addIng() {
     setIngredients((prev) => [...prev, blankIng()]);
   }
@@ -125,7 +128,6 @@ export function MealEditor({ open, meal, onClose, onSubmit }: Props) {
       setImagePreview(url);
     }
   }
-
   function clearImage() {
     setImageFile(null);
     setImagePreview(null);
@@ -164,50 +166,73 @@ export function MealEditor({ open, meal, onClose, onSubmit }: Props) {
     <Modal
       open={open}
       onClose={onClose}
-      title={meal ? `Edit ${meal.name}` : 'New meal'}
-      size="xl"
+      eyebrow={meal ? 'Edit meal card' : 'New meal card'}
+      title={
+        meal ? (
+          <>
+            <span className="italic">{meal.name}</span>
+          </>
+        ) : (
+          <>
+            A <span className="italic">new</span> meal
+          </>
+        )
+      }
       footer={
         <>
-          <button className="btn-ghost" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="btn-primary" onClick={submit} disabled={saving || !name.trim()}>
-            {saving ? 'Saving…' : meal ? 'Save changes' : 'Create meal'}
-          </button>
+          <span
+            style={{ fontSize: 12, color: 'var(--ink-3)' }}
+          >
+            Per-serving macros update as you add ingredients.
+          </span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-accent"
+              onClick={submit}
+              disabled={saving || !name.trim()}
+            >
+              {saving ? 'Saving…' : meal ? 'Save changes' : 'Create meal'}
+            </button>
+          </div>
         </>
       }
     >
-      <div className="grid grid-cols-12 gap-6">
-        {/* LEFT: photo + basics */}
-        <div className="col-span-12 lg:col-span-4 space-y-4">
+      <div className="editor-grid">
+        <div className="editor-left">
           <div
-            className="relative aspect-square w-full rounded-2xl border border-dashed border-black/15 overflow-hidden bg-canvas-subtle group cursor-pointer"
+            className="photo-drop"
             onClick={() => fileRef.current?.click()}
           >
             {imagePreview ? (
               <>
-                <img
-                  src={imagePreview}
-                  alt={name || 'meal'}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
+                <img src={imagePreview} alt={name || 'meal'} />
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     clearImage();
                   }}
-                  className="absolute top-2 right-2 rounded-full bg-black/60 text-white p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="icon-btn"
                   aria-label="Remove image"
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    background: 'rgba(26,20,13,0.7)',
+                    color: '#faf2dc',
+                  }}
                 >
                   <IconClose size={14} />
                 </button>
               </>
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-black/40 gap-2">
+              <div className="placeholder">
                 <IconImage size={28} />
-                <p className="text-sm font-medium">Click to upload photo</p>
-                <p className="text-xs text-black/35">PNG, JPG, WEBP</p>
+                <p className="it">Click to add a photo</p>
+                <p className="sub">PNG, JPG, WEBP</p>
               </div>
             )}
             <input
@@ -216,11 +241,12 @@ export function MealEditor({ open, meal, onClose, onSubmit }: Props) {
               accept="image/png,image/jpeg,image/webp,image/gif"
               onChange={handleImage}
               className="hidden"
+              style={{ display: 'none' }}
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="label">Name</label>
+          <div>
+            <label className="field-label">Name</label>
             <input
               className="input"
               value={name}
@@ -229,52 +255,46 @@ export function MealEditor({ open, meal, onClose, onSubmit }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="label">Servings / batch</label>
+          <div className="basics-row">
+            <div>
+              <label className="field-label">Servings per batch</label>
               <input
-                className="input"
+                className="input numeric"
                 type="number"
                 min={1}
                 value={servingCount}
                 onChange={(e) => setServingCount(Number(e.target.value))}
               />
             </div>
-            <div className="space-y-1">
-              <label className="label">Prep (min)</label>
+            <div>
+              <label className="field-label">Prep (min)</label>
               <input
-                className="input"
+                className="input numeric"
                 type="number"
                 min={0}
                 value={prepTime}
                 onChange={(e) =>
-                  setPrepTime(e.target.value === '' ? '' : Number(e.target.value))
+                  setPrepTime(
+                    e.target.value === '' ? '' : Number(e.target.value)
+                  )
                 }
                 placeholder="30"
               />
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="label">Tags</label>
-            <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-black/10 bg-white px-2 py-1.5 min-h-[42px]">
+          <div>
+            <label className="field-label">Tags</label>
+            <div className="tags-input">
               {tags.map((t) => (
-                <span
-                  key={t}
-                  className="chip bg-brand-100 text-brand-800 pl-2 pr-1 py-1"
-                >
+                <span key={t} className="chip">
                   {t}
-                  <button
-                    type="button"
-                    onClick={() => removeTag(t)}
-                    className="ml-0.5 rounded-full hover:bg-brand-200 p-0.5"
-                  >
+                  <button type="button" onClick={() => removeTag(t)}>
                     <IconClose size={10} />
                   </button>
                 </span>
               ))}
               <input
-                className="flex-1 min-w-[100px] bg-transparent px-1 py-1 text-sm focus:outline-none"
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -282,7 +302,11 @@ export function MealEditor({ open, meal, onClose, onSubmit }: Props) {
                     e.preventDefault();
                     addTag(tagsInput);
                     setTagsInput('');
-                  } else if (e.key === 'Backspace' && !tagsInput && tags.length) {
+                  } else if (
+                    e.key === 'Backspace' &&
+                    !tagsInput &&
+                    tags.length
+                  ) {
                     setTags(tags.slice(0, -1));
                   }
                 }}
@@ -292,16 +316,26 @@ export function MealEditor({ open, meal, onClose, onSubmit }: Props) {
                     setTagsInput('');
                   }
                 }}
-                placeholder={tags.length ? '' : 'oven, high-protein, chicken…'}
+                placeholder={tags.length ? '' : 'oven, chicken, …'}
               />
             </div>
-            <p className="text-[11px] text-black/45">Press Enter or comma to add. Use cooking-method tags like oven, stovetop, no-cook for smart prep grouping.</p>
+            <p
+              style={{
+                fontSize: 11,
+                color: 'var(--ink-3)',
+                marginTop: 6,
+              }}
+            >
+              Press Enter or comma to add. Use cooking-method tags like oven,
+              stovetop, no-cook for smart prep grouping.
+            </p>
           </div>
 
-          <div className="space-y-1">
-            <label className="label">Notes</label>
+          <div>
+            <label className="field-label">Notes</label>
             <textarea
-              className="input min-h-[72px]"
+              className="textarea"
+              style={{ minHeight: 72 }}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Anything to remember (substitutions, sauces, etc.)"
@@ -309,103 +343,150 @@ export function MealEditor({ open, meal, onClose, onSubmit }: Props) {
           </div>
         </div>
 
-        {/* RIGHT: ingredients + totals */}
-        <div className="col-span-12 lg:col-span-8 space-y-3">
-          <div className="flex items-baseline justify-between">
-            <h3 className="font-bold tracking-tight">Ingredients</h3>
-            <button onClick={addIng} className="btn-ghost text-sm">
-              <IconPlus size={14} /> Add ingredient
+        <div className="editor-right">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+            }}
+          >
+            <h3
+              style={{
+                fontFamily: 'Newsreader, serif',
+                fontWeight: 600,
+                fontSize: 22,
+              }}
+            >
+              Ingredients
+            </h3>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={addIng}
+            >
+              <IconPlus size={12} /> Add ingredient
             </button>
           </div>
 
-          <div className="rounded-xl border border-black/[0.06] overflow-hidden">
-            <div className="grid grid-cols-[1fr_120px_120px_72px_72px_72px_72px_40px] gap-2 px-3 py-2 text-[10px] uppercase font-bold tracking-wider text-black/55 bg-canvas-subtle">
-              <div>Name</div>
-              <div>Quantity</div>
-              <div>Category</div>
-              <div className="text-right">Cal</div>
-              <div className="text-right">P</div>
-              <div className="text-right">C</div>
-              <div className="text-right">F</div>
-              <div />
-            </div>
-            <div className="divide-y divide-black/[0.05]">
-              {ingredients.length === 0 && (
-                <div className="px-3 py-8 text-center text-sm text-black/40">
+          <div className="ing-list">
+            {ingredients.length === 0 && (
+              <div className="empty-state" style={{ padding: 40 }}>
+                <p style={{ color: 'var(--ink-3)', fontSize: 13 }}>
                   No ingredients yet. Click "Add ingredient" to begin.
-                </div>
-              )}
-              {ingredients.map((ing, idx) => (
-                <div
-                  key={idx}
-                  className="grid grid-cols-[1fr_120px_120px_72px_72px_72px_72px_40px] gap-2 px-3 py-1.5 items-center"
+                </p>
+              </div>
+            )}
+            {ingredients.map((ing, idx) => (
+              <div className="ing-row" key={idx}>
+                <input
+                  className="input sm"
+                  value={ing.name}
+                  onChange={(e) => updateIng(idx, { name: e.target.value })}
+                  placeholder="Chicken thigh"
+                />
+                <input
+                  className="input sm"
+                  value={ing.quantity_description}
+                  onChange={(e) =>
+                    updateIng(idx, { quantity_description: e.target.value })
+                  }
+                  placeholder="1 lb"
+                />
+                <select
+                  className="select sm"
+                  value={ing.category}
+                  onChange={(e) =>
+                    updateIng(idx, { category: e.target.value })
+                  }
+                  style={{
+                    textTransform: 'capitalize',
+                    padding: '7px 10px',
+                    fontSize: 12.5,
+                  }}
                 >
-                  <input
-                    className="input !py-1.5 !text-sm"
-                    value={ing.name}
-                    onChange={(e) => updateIng(idx, { name: e.target.value })}
-                    placeholder="Chicken thigh"
-                  />
-                  <input
-                    className="input !py-1.5 !text-sm"
-                    value={ing.quantity_description}
-                    onChange={(e) =>
-                      updateIng(idx, { quantity_description: e.target.value })
-                    }
-                    placeholder="1 lb"
-                  />
-                  <select
-                    className="input !py-1.5 !text-sm capitalize"
-                    value={ing.category}
-                    onChange={(e) => updateIng(idx, { category: e.target.value })}
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                  <NumberCell
-                    value={ing.calories}
-                    onChange={(v) => updateIng(idx, { calories: v })}
-                  />
-                  <NumberCell
-                    value={ing.protein_g}
-                    onChange={(v) => updateIng(idx, { protein_g: v })}
-                  />
-                  <NumberCell
-                    value={ing.carbs_g}
-                    onChange={(v) => updateIng(idx, { carbs_g: v })}
-                  />
-                  <NumberCell
-                    value={ing.fat_g}
-                    onChange={(v) => updateIng(idx, { fat_g: v })}
-                  />
-                  <button
-                    onClick={() => removeIng(idx)}
-                    className="rounded-lg p-1.5 text-black/40 hover:text-accent-rose hover:bg-rose-50"
-                    aria-label="Remove"
-                  >
-                    <IconTrash size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <NumberCell
+                  value={ing.calories}
+                  onChange={(v) => updateIng(idx, { calories: v })}
+                  placeholder="Cal"
+                />
+                <NumberCell
+                  value={ing.protein_g}
+                  onChange={(v) => updateIng(idx, { protein_g: v })}
+                  placeholder="P"
+                />
+                <NumberCell
+                  value={ing.carbs_g}
+                  onChange={(v) => updateIng(idx, { carbs_g: v })}
+                  placeholder="C"
+                />
+                <NumberCell
+                  value={ing.fat_g}
+                  onChange={(v) => updateIng(idx, { fat_g: v })}
+                  placeholder="F"
+                />
+                <button
+                  type="button"
+                  className="icon-btn danger"
+                  onClick={() => removeIng(idx)}
+                  aria-label="Remove"
+                  style={{ width: 28, height: 28 }}
+                >
+                  <IconTrash size={13} />
+                </button>
+              </div>
+            ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <SummaryTile label="Totals" sub={`Whole batch · ${servingCount || 1} servings`}>
-              <SummaryRow label="Calories" v={`${fmt(totals.cal, 0)} kcal`} />
-              <SummaryRow label="Protein" v={`${fmt(totals.p, 1)} g`} />
-              <SummaryRow label="Carbs" v={`${fmt(totals.c, 1)} g`} />
-              <SummaryRow label="Fat" v={`${fmt(totals.f, 1)} g`} />
-            </SummaryTile>
-            <SummaryTile label="Per serving" sub="What lands on the plate" highlight>
-              <SummaryRow label="Calories" v={`${fmt(totals.perCal, 0)} kcal`} />
-              <SummaryRow label="Protein" v={`${fmt(totals.perP, 1)} g`} />
-              <SummaryRow label="Carbs" v={`${fmt(totals.perC, 1)} g`} />
-              <SummaryRow label="Fat" v={`${fmt(totals.perF, 1)} g`} />
-            </SummaryTile>
+          <div className="totals-block">
+            <div className="tile batch">
+              <h4>Whole batch</h4>
+              <p className="h-sub">
+                {servingCount || 1} serving{servingCount === 1 ? '' : 's'}
+              </p>
+              <div className="stat-row">
+                <span>Calories</span>
+                <span className="v">{fmt(totals.cal, 0)} kcal</span>
+              </div>
+              <div className="stat-row">
+                <span>Protein</span>
+                <span className="v">{fmt(totals.p, 1)} g</span>
+              </div>
+              <div className="stat-row">
+                <span>Carbs</span>
+                <span className="v">{fmt(totals.c, 1)} g</span>
+              </div>
+              <div className="stat-row">
+                <span>Fat</span>
+                <span className="v">{fmt(totals.f, 1)} g</span>
+              </div>
+            </div>
+            <div className="tile serving">
+              <h4>Per serving</h4>
+              <p className="h-sub">What lands on the plate</p>
+              <div className="stat-row">
+                <span>Calories</span>
+                <span className="v">{fmt(totals.perCal, 0)} kcal</span>
+              </div>
+              <div className="stat-row">
+                <span>Protein</span>
+                <span className="v">{fmt(totals.perP, 1)} g</span>
+              </div>
+              <div className="stat-row">
+                <span>Carbs</span>
+                <span className="v">{fmt(totals.perC, 1)} g</span>
+              </div>
+              <div className="stat-row">
+                <span>Fat</span>
+                <span className="v">{fmt(totals.perF, 1)} g</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -416,9 +497,11 @@ export function MealEditor({ open, meal, onClose, onSubmit }: Props) {
 function NumberCell({
   value,
   onChange,
+  placeholder,
 }: {
   value: number;
   onChange: (v: number) => void;
+  placeholder?: string;
 }) {
   return (
     <input
@@ -426,44 +509,11 @@ function NumberCell({
       min={0}
       step="0.1"
       value={value === 0 ? '' : value}
-      onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
-      className="input !py-1.5 !text-sm text-right tabular-nums"
-      placeholder="0"
+      onChange={(e) =>
+        onChange(e.target.value === '' ? 0 : Number(e.target.value))
+      }
+      className="macro-mini-input"
+      placeholder={placeholder ?? '0'}
     />
-  );
-}
-
-function SummaryTile({
-  label,
-  sub,
-  children,
-  highlight = false,
-}: {
-  label: string;
-  sub?: string;
-  children: React.ReactNode;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        highlight ? 'bg-canvas-ink text-white border-canvas-ink' : 'bg-white border-black/[0.06]'
-      }`}
-    >
-      <div className="flex items-baseline justify-between">
-        <p className="text-xs font-bold uppercase tracking-wider">{label}</p>
-        {sub && <p className={`text-[10px] ${highlight ? 'text-white/60' : 'text-black/40'}`}>{sub}</p>}
-      </div>
-      <div className="mt-2 space-y-1">{children}</div>
-    </div>
-  );
-}
-
-function SummaryRow({ label, v }: { label: string; v: string }) {
-  return (
-    <div className="flex items-baseline justify-between text-sm">
-      <span className="opacity-70">{label}</span>
-      <span className="tabular-nums font-semibold">{v}</span>
-    </div>
   );
 }

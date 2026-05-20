@@ -1,59 +1,106 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import {
-  IconBowl,
-  IconCalendar,
-  IconList,
-  IconSettings,
-  IconSparkle,
-} from './Icons';
-import { cn } from '@/lib/utils';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { IconBowl, IconCalendar, IconList, IconSettings } from './Icons';
 import { Toaster } from './Toaster';
+import { useStore } from '@/lib/store';
+import { addDays, cn, fromISODate, startOfWeek } from '@/lib/utils';
+import { useMemo } from 'react';
 
 const NAV = [
   { to: '/planner', label: 'Planner', icon: IconCalendar },
-  { to: '/library', label: 'Library', icon: IconBowl },
-  { to: '/outputs', label: 'Outputs', icon: IconList },
-  { to: '/settings', label: 'Settings', icon: IconSettings },
+  { to: '/library', label: 'Cookbook', icon: IconBowl },
+  { to: '/outputs', label: 'Kitchen', icon: IconList },
 ];
 
+function weekVolNo(weekStart: Date) {
+  const year = weekStart.getFullYear();
+  const start = new Date(year, 0, 1);
+  const dayOfYear = Math.floor((weekStart.getTime() - start.getTime()) / 86400000) + 1;
+  const weekNo = Math.max(1, Math.ceil(dayOfYear / 7));
+  const vol = Math.max(1, year - 2024);
+  return { vol, weekNo };
+}
+
 export function Layout() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { weekStartISO, weekPlan } = useStore();
+
+  const weekStart = useMemo(() => fromISODate(weekStartISO), [weekStartISO]);
+  const liveStart = useMemo(() => startOfWeek(new Date()), []);
+  const liveEnd = useMemo(() => addDays(liveStart, 6), [liveStart]);
+  const isLiveWeek = weekStart.getTime() === liveStart.getTime();
+  const isPastWeek = weekStart.getTime() < liveStart.getTime();
+  const hasPlan = (weekPlan?.planned_meals.length ?? 0) > 0;
+
+  let status: { label: string; tone: 'live' | 'past' | 'future' | 'empty' };
+  if (isPastWeek) {
+    status = { label: 'Completed', tone: 'past' };
+  } else if (isLiveWeek) {
+    status = hasPlan
+      ? { label: 'This week', tone: 'live' }
+      : { label: 'To plan', tone: 'empty' };
+  } else if (weekStart > liveEnd) {
+    status = hasPlan
+      ? { label: 'Planned ahead', tone: 'future' }
+      : { label: 'To be planned', tone: 'empty' };
+  } else {
+    status = { label: 'This week', tone: 'live' };
+  }
+
+  const { vol, weekNo } = weekVolNo(weekStart);
+
+  const isSettings = location.pathname.startsWith('/settings');
+
   return (
-    <div className="min-h-full">
-      <header className="sticky top-0 z-30 border-b border-black/[0.06] bg-canvas/85 backdrop-blur-md no-print">
-        <div className="mx-auto max-w-[1400px] px-6 h-16 flex items-center gap-8">
-          <NavLink to="/planner" className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-canvas-ink text-white grid place-items-center shadow-card">
-              <IconSparkle size={18} />
-            </div>
-            <div className="leading-tight">
-              <div className="font-bold text-[15px] tracking-tight">Mise</div>
-              <div className="text-[10px] uppercase tracking-[0.16em] text-black/50 font-semibold">
-                Meal Planner
-              </div>
+    <div className="shell">
+      <header className="masthead no-print">
+        <div className="masthead-inner">
+          <NavLink to="/planner" className="brand">
+            <div className="brand-mark">M</div>
+            <div className="brand-words">
+              <span className="name">Mise</span>
+              <span className="tag">Weekly Meal Planner</span>
             </div>
           </NavLink>
-          <nav className="flex items-center gap-1">
+          <nav className="nav-pill" aria-label="Primary">
             {NAV.map((n) => (
               <NavLink
                 key={n.to}
                 to={n.to}
-                className={({ isActive }) =>
-                  cn(
-                    'inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors',
-                    isActive
-                      ? 'bg-canvas-ink text-white shadow-card'
-                      : 'text-black/65 hover:text-canvas-ink hover:bg-black/[0.04]'
-                  )
-                }
+                className={({ isActive }) => (isActive ? 'active' : '')}
               >
-                <n.icon size={16} />
+                <n.icon size={14} />
                 {n.label}
               </NavLink>
             ))}
           </nav>
+          <div className="shell-right">
+            <div className={cn('iss', `status-${status.tone}`)}>
+              <span className="vol">
+                Vol. {vol} · No. {weekNo}
+              </span>
+              <span className="status-line">
+                <span className="status-dot" />
+                {status.label}
+              </span>
+            </div>
+            <span
+              style={{ width: 1, height: 28, background: 'var(--rule)' }}
+              aria-hidden
+            />
+            <button
+              type="button"
+              className={cn('icon-btn', isSettings && 'active')}
+              onClick={() => navigate('/settings')}
+              aria-label="Settings"
+              title="Settings"
+            >
+              <IconSettings size={17} />
+            </button>
+          </div>
         </div>
       </header>
-      <main className="mx-auto max-w-[1400px] px-6 py-6">
+      <main className="main">
         <Outlet />
       </main>
       <Toaster />

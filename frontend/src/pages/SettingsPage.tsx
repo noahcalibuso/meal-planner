@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 import type { DayTarget, FullSettings } from '@/lib/types';
 import { DAY_LABELS_LONG, cn, fmt } from '@/lib/utils';
-import { IconSparkle } from '@/components/Icons';
 
 export function SettingsPage() {
   const { settings, updateSettings } = useStore();
@@ -13,7 +12,6 @@ export function SettingsPage() {
     if (settings) setDraft(structuredClone(settings));
   }, [settings]);
 
-  // Macro split (% of calories) from default values
   const split = useMemo(() => {
     if (!draft) return { p: 0, c: 0, f: 0, totalKcal: 0 };
     const p = draft.defaults.default_protein_g * 4;
@@ -28,10 +26,17 @@ export function SettingsPage() {
     };
   }, [draft]);
 
-  if (!draft) return <div className="text-sm text-black/45">Loading settings…</div>;
+  if (!draft)
+    return (
+      <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+        Loading settings…
+      </div>
+    );
 
   function setDefault(key: keyof FullSettings['defaults'], val: number) {
-    setDraft((d) => (d ? { ...d, defaults: { ...d.defaults, [key]: val } } : d));
+    setDraft((d) =>
+      d ? { ...d, defaults: { ...d.defaults, [key]: val } } : d
+    );
   }
 
   function getDayTarget(day: number): DayTarget {
@@ -76,15 +81,18 @@ export function SettingsPage() {
 
   function clearDayOverride(day: number) {
     setDraft((d) =>
-      d ? { ...d, per_day: d.per_day.filter((x) => x.day_of_week !== day) } : d
+      d
+        ? { ...d, per_day: d.per_day.filter((x) => x.day_of_week !== day) }
+        : d
     );
   }
 
   function copyDefaultsTo(day: number) {
-    setDayTarget(day, 'calories', draft!.defaults.default_calories);
-    setDayTarget(day, 'protein_g', draft!.defaults.default_protein_g);
-    setDayTarget(day, 'carbs_g', draft!.defaults.default_carbs_g);
-    setDayTarget(day, 'fat_g', draft!.defaults.default_fat_g);
+    if (!draft) return;
+    setDayTarget(day, 'calories', draft.defaults.default_calories);
+    setDayTarget(day, 'protein_g', draft.defaults.default_protein_g);
+    setDayTarget(day, 'carbs_g', draft.defaults.default_carbs_g);
+    setDayTarget(day, 'fat_g', draft.defaults.default_fat_g);
   }
 
   async function save() {
@@ -98,169 +106,256 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl pb-20">
-      <header>
-        <p className="text-xs uppercase tracking-[0.18em] font-bold text-black/40">
-          Settings
-        </p>
-        <h1 className="text-3xl font-bold tracking-tight mt-1">Daily targets</h1>
-        <p className="text-sm text-black/55 mt-1">
-          Set your defaults, then override individual days for training vs. rest.
-        </p>
-      </header>
+    <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 80 }}>
+      <div className="page-head">
+        <div className="page-head-row">
+          <div className="eyebrow">Settings</div>
+        </div>
+        <div className="title-block">
+          <h1>
+            <span className="italic">Daily</span> targets
+          </h1>
+          <p className="sub">
+            Set your defaults, then override individual days for training vs.
+            rest.
+          </p>
+        </div>
+      </div>
 
-      <section className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 lg:col-span-8 card p-6 space-y-5">
-          <div>
-            <h2 className="font-bold tracking-tight">Default daily targets</h2>
-            <p className="text-xs text-black/55 mt-0.5">
-              Applied to every day unless overridden below.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Field
+      <section className="settings-grid">
+        <div className="card" style={{ padding: 22 }}>
+          <h2
+            style={{
+              fontFamily: 'Newsreader, serif',
+              fontWeight: 600,
+              fontSize: 20,
+            }}
+          >
+            Default daily targets
+          </h2>
+          <p
+            style={{
+              fontSize: 12,
+              color: 'var(--ink-3)',
+              marginTop: 4,
+              marginBottom: 18,
+            }}
+          >
+            Applied to every day unless overridden below.
+          </p>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: 12,
+            }}
+          >
+            <TargetField
               label="Calories"
               unit="kcal"
               value={draft.defaults.default_calories}
               onChange={(v) => setDefault('default_calories', v)}
-              color="bg-canvas-ink"
+              color="var(--ink)"
             />
-            <Field
+            <TargetField
               label="Protein"
               unit="g"
               value={draft.defaults.default_protein_g}
               onChange={(v) => setDefault('default_protein_g', v)}
-              color="bg-accent-coral"
+              color="var(--terracotta)"
             />
-            <Field
+            <TargetField
               label="Carbs"
               unit="g"
               value={draft.defaults.default_carbs_g}
               onChange={(v) => setDefault('default_carbs_g', v)}
-              color="bg-accent-amber"
+              color="var(--mustard)"
             />
-            <Field
+            <TargetField
               label="Fat"
               unit="g"
               value={draft.defaults.default_fat_g}
               onChange={(v) => setDefault('default_fat_g', v)}
-              color="bg-accent-plum"
+              color="var(--plum)"
             />
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-4 card p-6">
-          <h3 className="font-bold tracking-tight text-sm">Macro split</h3>
-          <p className="text-xs text-black/55 mt-0.5">
+        <div className="card split-card">
+          <h3
+            style={{
+              fontFamily: 'Newsreader, serif',
+              fontWeight: 600,
+              fontSize: 17,
+            }}
+          >
+            Macro split
+          </h3>
+          <p
+            style={{
+              fontSize: 12,
+              color: 'var(--ink-3)',
+              marginTop: 4,
+            }}
+          >
             Based on your default macros ({fmt(split.totalKcal, 0)} kcal)
           </p>
-          <div className="mt-4 h-3 rounded-full overflow-hidden flex">
-            <div className="bg-accent-coral h-full" style={{ width: `${split.p}%` }} />
-            <div className="bg-accent-amber h-full" style={{ width: `${split.c}%` }} />
-            <div className="bg-accent-plum h-full" style={{ width: `${split.f}%` }} />
+          <div className="bar-stack">
+            <div
+              style={{
+                background: 'var(--terracotta)',
+                width: `${split.p}%`,
+                height: '100%',
+              }}
+            />
+            <div
+              style={{
+                background: 'var(--mustard)',
+                width: `${split.c}%`,
+                height: '100%',
+              }}
+            />
+            <div
+              style={{
+                background: 'var(--plum)',
+                width: `${split.f}%`,
+                height: '100%',
+              }}
+            />
           </div>
-          <div className="mt-3 space-y-2 text-sm">
-            <SplitRow color="bg-accent-coral" label="Protein" pct={split.p} grams={draft.defaults.default_protein_g} />
-            <SplitRow color="bg-accent-amber" label="Carbs" pct={split.c} grams={draft.defaults.default_carbs_g} />
-            <SplitRow color="bg-accent-plum" label="Fat" pct={split.f} grams={draft.defaults.default_fat_g} />
+          <div style={{ marginTop: 12 }}>
+            <SplitRow
+              color="var(--terracotta)"
+              label="Protein"
+              pct={split.p}
+              grams={draft.defaults.default_protein_g}
+            />
+            <SplitRow
+              color="var(--mustard)"
+              label="Carbs"
+              pct={split.c}
+              grams={draft.defaults.default_carbs_g}
+            />
+            <SplitRow
+              color="var(--plum)"
+              label="Fat"
+              pct={split.f}
+              grams={draft.defaults.default_fat_g}
+            />
           </div>
         </div>
       </section>
 
-      <section className="card overflow-hidden">
-        <div className="px-6 py-4 border-b border-black/[0.05] flex items-baseline justify-between">
-          <div>
-            <h2 className="font-bold tracking-tight">Per-day overrides</h2>
-            <p className="text-xs text-black/55 mt-0.5">
-              Leave fields blank to inherit the default.
-            </p>
-          </div>
+      <section className="overrides">
+        <div className="o-head">
+          <h2
+            style={{
+              fontFamily: 'Newsreader, serif',
+              fontWeight: 600,
+              fontSize: 20,
+            }}
+          >
+            Per-day overrides
+          </h2>
+          <p
+            style={{
+              fontSize: 12,
+              color: 'var(--ink-3)',
+              marginTop: 4,
+            }}
+          >
+            Leave fields blank to inherit the default.
+          </p>
         </div>
-        <div className="divide-y divide-black/[0.05]">
-          <div className="grid grid-cols-[180px_repeat(4,1fr)_72px] gap-3 px-6 py-2 text-[10px] uppercase tracking-wider font-bold text-black/55 bg-canvas-subtle/40">
-            <div>Day</div>
-            <div>Calories</div>
-            <div>Protein g</div>
-            <div>Carbs g</div>
-            <div>Fat g</div>
-            <div />
-          </div>
-          {Array.from({ length: 7 }).map((_, day) => {
-            const t = getDayTarget(day);
-            const hasOverride =
-              t.calories != null ||
-              t.protein_g != null ||
-              t.carbs_g != null ||
-              t.fat_g != null;
-            return (
+        <div className="o-row header">
+          <div>Day</div>
+          <div>Calories</div>
+          <div>Protein g</div>
+          <div>Carbs g</div>
+          <div>Fat g</div>
+          <div />
+        </div>
+        {Array.from({ length: 7 }).map((_, day) => {
+          const t = getDayTarget(day);
+          const hasOverride =
+            t.calories != null ||
+            t.protein_g != null ||
+            t.carbs_g != null ||
+            t.fat_g != null;
+          return (
+            <div
+              key={day}
+              className={cn('o-row', hasOverride && 'has-override')}
+            >
               <div
-                key={day}
-                className={cn(
-                  'grid grid-cols-[180px_repeat(4,1fr)_72px] gap-3 px-6 py-3 items-center transition-colors',
-                  hasOverride && 'bg-brand-50/30'
-                )}
+                className={cn('day-cell', hasOverride && 'has-override')}
               >
-                <div className="text-sm font-semibold flex items-center gap-2">
-                  <span
-                    className={cn(
-                      'h-1.5 w-1.5 rounded-full',
-                      hasOverride ? 'bg-brand-500' : 'bg-black/15'
-                    )}
-                  />
-                  {DAY_LABELS_LONG[day]}
-                  {hasOverride && (
-                    <span className="text-[9px] uppercase tracking-wider font-bold text-brand-700 bg-brand-100 px-1.5 py-0.5 rounded">
-                      Override
-                    </span>
-                  )}
-                </div>
-                <OverrideField
-                  value={t.calories}
-                  placeholder={fmt(draft.defaults.default_calories, 0)}
-                  onChange={(v) => setDayTarget(day, 'calories', v)}
-                />
-                <OverrideField
-                  value={t.protein_g}
-                  placeholder={fmt(draft.defaults.default_protein_g, 0)}
-                  onChange={(v) => setDayTarget(day, 'protein_g', v)}
-                />
-                <OverrideField
-                  value={t.carbs_g}
-                  placeholder={fmt(draft.defaults.default_carbs_g, 0)}
-                  onChange={(v) => setDayTarget(day, 'carbs_g', v)}
-                />
-                <OverrideField
-                  value={t.fat_g}
-                  placeholder={fmt(draft.defaults.default_fat_g, 0)}
-                  onChange={(v) => setDayTarget(day, 'fat_g', v)}
-                />
-                {hasOverride ? (
-                  <button
-                    onClick={() => clearDayOverride(day)}
-                    className="text-[11px] font-semibold rounded-lg px-2 py-1 text-black/55 hover:text-canvas-ink hover:bg-black/[0.05] justify-self-end"
-                  >
-                    Clear
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => copyDefaultsTo(day)}
-                    className="text-[11px] font-semibold rounded-lg px-2 py-1 text-brand-700 hover:bg-brand-50 justify-self-end"
-                  >
-                    Override
-                  </button>
-                )}
+                <span className="dot" />
+                {DAY_LABELS_LONG[day]}
+                {hasOverride && <span className="tag">Override</span>}
               </div>
-            );
-          })}
-        </div>
+              <OverrideField
+                value={t.calories}
+                placeholder={fmt(draft.defaults.default_calories, 0)}
+                onChange={(v) => setDayTarget(day, 'calories', v)}
+              />
+              <OverrideField
+                value={t.protein_g}
+                placeholder={fmt(draft.defaults.default_protein_g, 0)}
+                onChange={(v) => setDayTarget(day, 'protein_g', v)}
+              />
+              <OverrideField
+                value={t.carbs_g}
+                placeholder={fmt(draft.defaults.default_carbs_g, 0)}
+                onChange={(v) => setDayTarget(day, 'carbs_g', v)}
+              />
+              <OverrideField
+                value={t.fat_g}
+                placeholder={fmt(draft.defaults.default_fat_g, 0)}
+                onChange={(v) => setDayTarget(day, 'fat_g', v)}
+              />
+              {hasOverride ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => clearDayOverride(day)}
+                  style={{ padding: '4px 8px', fontSize: 11 }}
+                >
+                  Clear
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => copyDefaultsTo(day)}
+                  style={{ padding: '4px 8px', fontSize: 11 }}
+                >
+                  Override
+                </button>
+              )}
+            </div>
+          );
+        })}
       </section>
 
-      <div className="flex items-center justify-between gap-3 sticky bottom-4 z-20">
-        <p className="text-xs text-black/55 flex items-center gap-1.5 bg-white/80 backdrop-blur px-3 py-2 rounded-xl border border-black/[0.06] shadow-card">
-          <IconSparkle size={12} className="text-brand-600" />
-          Tip: higher-carb days fuel training; rest days can lean slightly lower-cal.
-        </p>
-        <button className="btn-primary shadow-card" onClick={save} disabled={saving}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 12,
+          position: 'sticky',
+          bottom: 16,
+          marginTop: 22,
+          zIndex: 20,
+        }}
+      >
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={save}
+          disabled={saving}
+        >
           {saving ? 'Saving…' : 'Save settings'}
         </button>
       </div>
@@ -268,7 +363,7 @@ export function SettingsPage() {
   );
 }
 
-function Field({
+function TargetField({
   label,
   unit,
   value,
@@ -282,21 +377,20 @@ function Field({
   color: string;
 }) {
   return (
-    <div className="rounded-2xl border border-black/[0.06] p-4 hover:border-black/15 transition-colors focus-within:border-canvas-ink focus-within:shadow-card">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-wider font-bold text-black/55">
-        <span className={cn('h-2 w-2 rounded-full', color)} />
+    <div className="target-field">
+      <div className="lbl">
+        <span className="dot" style={{ background: color }} />
         {label}
       </div>
-      <div className="mt-2 flex items-baseline gap-1">
+      <div className="val-row">
         <input
           type="number"
           min={0}
           step={1}
           value={value}
           onChange={(e) => onChange(Number(e.target.value) || 0)}
-          className="w-24 text-2xl font-bold tabular-nums bg-transparent border-0 focus:outline-none focus:ring-0 p-0"
         />
-        <span className="text-xs text-black/45 font-semibold">{unit}</span>
+        <span className="u">{unit}</span>
       </div>
     </div>
   );
@@ -315,7 +409,7 @@ function OverrideField({
     <input
       type="number"
       min={0}
-      className="input !py-1.5 !text-sm tabular-nums"
+      className="input sm numeric"
       value={value == null ? '' : value}
       placeholder={placeholder}
       onChange={(e) =>
@@ -337,14 +431,24 @@ function SplitRow({
   grams: number;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 text-sm">
-      <div className="flex items-center gap-2">
-        <span className={cn('h-1.5 w-1.5 rounded-full', color)} />
-        <span className="font-semibold">{label}</span>
+    <div className="row-line">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: color,
+            display: 'inline-block',
+          }}
+        />
+        <span style={{ fontWeight: 600 }}>{label}</span>
       </div>
-      <div className="tabular-nums text-black/65">
-        <span className="font-bold text-canvas-ink">{fmt(pct, 0)}%</span>
-        <span className="text-black/40 mx-1">·</span>
+      <div className="num" style={{ color: 'var(--ink-3)' }}>
+        <span style={{ color: 'var(--ink)', fontWeight: 700 }}>
+          {fmt(pct, 0)}%
+        </span>
+        <span style={{ color: 'var(--muted-2)', margin: '0 6px' }}>·</span>
         <span>{fmt(grams, 0)} g</span>
       </div>
     </div>

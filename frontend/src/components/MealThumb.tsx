@@ -6,10 +6,11 @@ interface Props {
   meal: Meal;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  style?: React.CSSProperties;
 }
 
 const SIZES = {
-  sm: 'h-10 w-10 text-sm rounded-xl',
+  sm: 'h-10 w-10 text-sm rounded-[10px]',
   md: 'h-14 w-14 text-base rounded-xl',
   lg: 'h-20 w-20 text-xl rounded-2xl',
   xl: 'h-full w-full text-3xl rounded-none',
@@ -25,16 +26,14 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-// Hash-based deterministic gradient and accent so meals look distinct + cohesive
+// Editorial palette — paper / terracotta / sage / mustard / plum
 const PALETTES: { from: string; to: string; ink: string; accent: string }[] = [
-  { from: '#e7f1d6', to: '#c9dfa5', ink: '#3f5e29', accent: '#85ad57' }, // brand
-  { from: '#fde6db', to: '#fac3a8', ink: '#9a3a1f', accent: '#ef6f5b' }, // coral
-  { from: '#fdecc7', to: '#f7d27c', ink: '#7a4d10', accent: '#f5a623' }, // amber
-  { from: '#ede4fc', to: '#d3c0f5', ink: '#4c2c8e', accent: '#7c3aed' }, // plum
-  { from: '#dceefd', to: '#a8d3f3', ink: '#11476c', accent: '#0ea5e9' }, // sky
-  { from: '#dff3ea', to: '#a8dec1', ink: '#1c5a3b', accent: '#16a370' }, // emerald
-  { from: '#fde4ec', to: '#f6b7c8', ink: '#8a1f3b', accent: '#e11d48' }, // rose
-  { from: '#fdebd6', to: '#f7c891', ink: '#7c3d0d', accent: '#ea7820' }, // orange
+  { from: '#fbeadc', to: '#f3c4a3', ink: '#a64a30', accent: '#c25a3c' }, // terracotta
+  { from: '#e8eed1', to: '#c5d199', ink: '#586438', accent: '#6f7d4a' }, // sage
+  { from: '#fae9c4', to: '#f0cd83', ink: '#a87013', accent: '#c98a1f' }, // mustard
+  { from: '#ecdce6', to: '#cfa9c0', ink: '#5e3349', accent: '#7c4a64' }, // plum
+  { from: '#f5efe2', to: '#e3d9bf', ink: '#3b3022', accent: '#6b5d47' }, // paper
+  { from: '#ede4d1', to: '#cdb98a', ink: '#3b3022', accent: '#8a6c34' }, // tan
 ];
 
 function paletteFor(name: string) {
@@ -43,7 +42,7 @@ function paletteFor(name: string) {
   return PALETTES[h % PALETTES.length];
 }
 
-export function MealThumb({ meal, size = 'md', className }: Props) {
+export function MealThumb({ meal, size = 'md', className, style }: Props) {
   const url = fileUrl(meal.photo_path);
   if (url) {
     return (
@@ -51,6 +50,7 @@ export function MealThumb({ meal, size = 'md', className }: Props) {
         src={url}
         alt={meal.name}
         className={cn('object-cover shrink-0', SIZES[size], className)}
+        style={style}
       />
     );
   }
@@ -66,12 +66,13 @@ export function MealThumb({ meal, size = 'md', className }: Props) {
       style={{
         background: `linear-gradient(135deg, ${p.from} 0%, ${p.to} 100%)`,
         color: p.ink,
+        fontFamily: 'Newsreader, Georgia, serif',
+        ...style,
       }}
       aria-label={meal.name}
     >
-      {/* Soft decorative arc */}
       <span
-        className="absolute -right-3 -bottom-3 rounded-full opacity-25 pointer-events-none"
+        className="absolute -right-3 -bottom-3 rounded-full opacity-30 pointer-events-none"
         style={{
           width: '70%',
           height: '70%',
@@ -79,9 +80,7 @@ export function MealThumb({ meal, size = 'md', className }: Props) {
         }}
       />
       {init ? (
-        <span className="relative z-10 font-extrabold tracking-tight">
-          {init}
-        </span>
+        <span className="relative z-10 italic">{init}</span>
       ) : (
         <IconBowl />
       )}

@@ -207,3 +207,29 @@ export const IconDrop = (p: IconProps) => (
     <path d="M12 3s7 7 7 12a7 7 0 1 1-14 0c0-5 7-12 7-12Z" />
   </svg>
 );
+
+export const IconCopy = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="9" y="9" width="13" height="13" rx="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
+export const IconArrowRight = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M5 12h14M13 5l7 7-7 7" />
+  </svg>
+);
+
+export const IconStar = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="m12 2 3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z" />
+  </svg>
+);
+
+export const IconUpload = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <path d="M17 8l-5-5-5 5M12 3v12" />
+  </svg>
+);
